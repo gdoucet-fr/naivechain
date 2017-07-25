@@ -1,0 +1,31 @@
+//
+   Created by Gabriel on 28/06/2017.
+
+doctype html
+html(lang='en')
+  head
+    meta(charset='UTF-8')
+    title #{pageData.peerName}
+    link(rel='stylesheet', href='https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css', integrity='sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ', crossorigin='anonymous')
+    script(src='https://code.jquery.com/jquery-3.1.1.slim.min.js', integrity='sha384-A7FZj7v+d/sdmMqp/nOQwliLvUsJfDHW+k9Omg/a/EheAdgtzNs3hpfag6Ed950n', crossorigin='anonymous')
+    script(src='https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js', integrity='sha384-DztdAPBWPRXSA/3eYEEUWrWCy7G5KFbe8fFjk5JAIxUYHKkDx6Qin1DkWx51bBrb', crossorigin='anonymous')
+    script(src='https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js', integrity='sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn', crossorigin='anonymous')
+    link(rel='stylesheet' href='style/index.css')
+  body
+    .container
+      .row
+        .col-8
+          form(action='/mineBlock', method='POST')
+            .form-group
+              h4 Mine a block
+              input#data.form-control(type='text', placeholder='Block data', name='data', value='')
+            button.btn.btn-primary(type='submit') Add block
+        .col-4
+          - var blockchain = JSON.parse(pageData.blockchain);
+          h4 Blockchain
+          each block in blockchain
+            div(class='card')
+              div(class='card-block')
+                h4(class='card-title') Block #{block.index}
+                h6(class='card-subtitle mb-2 text-muted') Timestamp: #{block.timestamp}
+                h6(class='card-subtitle mb-2 text-muted') Data: #{block.data}

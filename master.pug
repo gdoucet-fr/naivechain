@@ -1,0 +1,101 @@
+//
+   Created by Gabriel on 04/07/2017.
+
+doctype html
+html(lang='en')
+  head
+    meta(charset='UTF-8')
+    title Master
+    link(rel='stylesheet', href='https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css', integrity='sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ', crossorigin='anonymous')
+    link(rel='stylesheet', href='https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css')
+    script(src='https://code.jquery.com/jquery-3.1.1.slim.min.js', integrity='sha384-A7FZj7v+d/sdmMqp/nOQwliLvUsJfDHW+k9Omg/a/EheAdgtzNs3hpfag6Ed950n', crossorigin='anonymous')
+    script(src='https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js', integrity='sha384-DztdAPBWPRXSA/3eYEEUWrWCy7G5KFbe8fFjk5JAIxUYHKkDx6Qin1DkWx51bBrb', crossorigin='anonymous')
+    script(src='https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js', integrity='sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn', crossorigin='anonymous')
+    script(src='https://unpkg.com/axios/dist/axios.min.js')
+    script(src='script/master.js')
+    link(rel='stylesheet' href='style/master.css')
+body
+  .container
+    .row
+      .col-12
+        - var peers = JSON.parse(pageData.peers);
+        h2 Cluster
+        table(class='table')
+          thead
+            tr
+            th Name
+            th HTTP address
+            th Web socket address
+            th Controls
+          tbody
+          each peer in peers
+            tr
+              td
+                a(href=peer.httpAddress) #{peer.name}
+              td #{peer.httpAddress}
+              td #{peer.p2pAddress}
+              td
+                button(type='button', class='btn btn-default btn-sm')
+                  i(class='fa fa-ban', aria-hidden='true')
+
+      .col-6
+        h2 Add a peer
+        form(action='/addPeer', method='POST')
+          div(class='form-group row')
+            label(for='peer-name-input', class='col-2 col-form-label') Peer name
+            div(class='col-10')
+              input(class='form-control', type='text', value='', placeholder='Type the name...', id='peer-name-input', name='peer-name')
+          div(class='form-group row')
+            label(for='http-port-input', class='col-2 col-form-label') HTTP port
+            div(class='col-10')
+              input(class='form-control', type='number', value='', placeholder='HTTP port', id='http-port-input', name='http-port')
+          div(class='form-group row')
+            label(for='p2p-port-input', class='col-2 col-form-label') P2P port
+            div(class='col-10')
+              input(class='form-control', type='number', value='', placeholder='P2P port', id='p2p-port-input', name='p2p-port')
+          div(class='form-group row')
+            button.btn.btn-primary(type='submit') Add peer
+
+      .col-6
+        h2 Mine a block
+        form
+          div(class='form-group row')
+            label(for='block-data-input', class='col-2 col-form-label') Block data
+            div(class='col-10')
+              input(class='form-control', type='text', placeholder='Type the message...', id='block-data-input', name='block-data')
+          div(class='form-group row')
+            label(class='col-2 col-form-label') Peer
+            div(class='col-10')
+              select(id='peer-select', name='peer-name')
+                each peer in peers
+                  option(value=peer.httpAddress) #{peer.name}
+          div(class='form-group row')
+            button.btn.btn-primary(onclick='mineBlock()') Mine block
+
+      .col-12
+        h2 Create a transaction
+        form
+          div(class='form-group row')
+            label(class='col-2 col-form-label') Peer from
+            div(class='col-10')
+              select(id='peer-from', name='peer-from-name')
+                each peer in peers
+                  option(value=peer.name) #{peer.name}
+          div(class='form-group row')
+            label(class='col-2 col-form-label') Peer to
+            div(class='col-10')
+              select(id='peer-to', name='peer-to-name')
+                each peer in peers
+                  option(value=peer.httpAddress) #{peer.name}
+          div(class='form-group row')
+            button.btn.btn-primary(onclick='createTransaction()') Create transaction
+
+      .col-12
+        - var blockchain = JSON.parse(pageData.blockchain);
+        h2 Blockchain
+        each block in blockchain
+          div(class='card')
+            div(class='card-block')
+              h4(class='card-title') Block #{block.index}
+              h6(class='card-subtitle mb-2 text-muted') Timestamp: #{block.timestamp}
+              h6(class='card-subtitle mb-2 text-muted') Data: #{block.data}
