@@ -9,14 +9,16 @@ const path   = require('path');
 //const logger = require(path.join(__dirname, 'logger'));
 const logger = require('winston');
 const uuidv1 = require('uuid/v1');
+const _      = require('lodash');
 
 class Block {
-  constructor(index, previousHash, timestamp, data, hash) {
+  constructor(index, previousHash, timestamp, data, hash, miner) {
     this.index        = index;
     this.previousHash = previousHash.toString();
     this.timestamp    = timestamp;
     this.data         = data;
     this.hash         = hash.toString();
+    this.miner        = miner;
   };
 }
 
@@ -25,7 +27,6 @@ class Transaction {
     this.id = uuidv1();
   };
 }
-
 
 /**
  * Gets the genesis block of the blockchain.
@@ -125,18 +126,20 @@ const isValidChain = function (blockchainToValidate) {
  * @param blockData - The block data
  * @returns {Block}
  */
-const generateNextBlock = function (blockchain, blockData) {
+const generateNextBlock = function (blockchain, blockData, miner) {
   let previousBlock = getLatestBlock(blockchain);
   let nextIndex     = previousBlock.index + 1;
   let nextTimestamp = new Date().getTime() / 1000; // 0;// for tests
   let nextHash      = calculateHash(nextIndex, previousBlock.hash, nextTimestamp, blockData);
-  return new Block(nextIndex, previousBlock.hash, nextTimestamp, blockData, nextHash);
+  return new Block(nextIndex, previousBlock.hash, nextTimestamp, blockData, nextHash, miner);
 };
 
 const addBlock = function (newBlock, blockchain) {
-  if (isValidNewBlock(newBlock, getLatestBlock(blockchain))) {
-    blockchain.push(newBlock);
+  let newChain = _.cloneDeep(blockchain);
+  if (isValidNewBlock(newBlock, getLatestBlock(newChain))) {
+    newChain.push(newBlock);
   }
+  return newChain;
 };
 
 module.exports = {

@@ -26,11 +26,11 @@ module.exports = function (sockets, p2pPort, blockchain) {
     return {'type': MessageType.QUERY_ALL};
   };
 
-  const responseChainMsg = function () {
+  const responseChainMsg = function (blockchain) {
     return {'type': MessageType.RESPONSE_BLOCKCHAIN, 'data': JSON.stringify(blockchain)};
   };
 
-  const responseLatestMsg = function () {
+  const responseLatestMsg = function (blockchain) {
     return {
       'type': MessageType.RESPONSE_BLOCKCHAIN,
       'data': JSON.stringify([blockchainAPI.getLatestBlock(blockchain)])
@@ -51,7 +51,7 @@ module.exports = function (sockets, p2pPort, blockchain) {
       if (latestBlockHeld.hash === latestBlockReceived.previousHash) {
         logger.success('We can append the received block to our chain');
         blockchain.push(latestBlockReceived);
-        broadcast(responseLatestMsg());
+        broadcast(responseLatestMsg(blockchain));
       } else if (receivedBlocks.length === 1) {
         logger.warn('We have to query the chain from our peer');
         broadcast(queryAllMsg());
@@ -85,10 +85,10 @@ module.exports = function (sockets, p2pPort, blockchain) {
       logger.verbose('Received message' + JSON.stringify(message));
       switch (message.type) {
         case MessageType.QUERY_LATEST:
-          write(ws, responseLatestMsg());
+          write(ws, responseLatestMsg(blockchain));
           break;
         case MessageType.QUERY_ALL:
-          write(ws, responseChainMsg());
+          write(ws, responseChainMsg(blockchain));
           break;
         case MessageType.RESPONSE_BLOCKCHAIN:
           handleBlockchainResponse(message);
@@ -129,7 +129,7 @@ module.exports = function (sockets, p2pPort, blockchain) {
     if (blockchainAPI.isValidChain(newBlocks) && newBlocks.length > blockchain.length) {
       logger.log('[SUCCESS] Received blockchain is valid. Replacing current blockchain with received blockchain');
       blockchain = newBlocks;
-      broadcast(responseLatestMsg());
+      broadcast(responseLatestMsg(blockchain));
     } else {
       logger.error('Received blockchain invalid');
     }
