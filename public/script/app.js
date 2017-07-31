@@ -64,7 +64,7 @@ angular.module('blockchain', [])
     };
 
     const mineBlock = function (blockchain, blockData, miner) {
-      let data = {blockData: blockData, blockchain: blockchain, minedBy: miner};
+      let data = {blockData: blockData, blockchain: blockchain, miner: miner};
       return $http({
         method: 'POST',
         url: 'http://localhost:8080/mineBlock',
@@ -85,14 +85,38 @@ angular.module('blockchain', [])
       }).then(function (res) {
         let validBlocks = res.data.data;
         let blockchain  = getBlockchain();
-        if (validBlocks && newBlocks.length > blockchain.length) {
-          logger.log('Received blockchain is valid. Replacing current blockchain with received blockchain', 'success');
-          setBlockchain(newBlocks);
-          return true;
+        if (validBlocks) {
+          if (newBlocks.length > blockchain.length) {
+            logger.log('Received blockchain is valid. Replacing current blockchain with received blockchain', 'success');
+            setBlockchain(newBlocks);
+            return true;
+          } else {
+            logger.log('Received blockchain is valid. Received blocks not longer than current blockchain', 'info');
+            return false;
+          }
         } else {
-          console.error('Received blockchain invalid');
+          logger.log('Received blockchain invalid', 'error');
           return false;
         }
+      });
+    };
+
+    class Transaction {
+      constructor(sender, recipient, data) {
+        this.sender    = sender;
+        this.recipient = recipient;
+        this.data      = data;
+      };
+    }
+
+    const sendTransaction = function (transaction) {
+      let data = {transaction: transaction};
+      return $http({
+        method: 'POST',
+        url: 'http://localhost:8080/sendTransaction',
+        data: data
+      }).then(function (res) {
+        console.log(res.data.data);
       });
     };
 
@@ -103,7 +127,9 @@ angular.module('blockchain', [])
       replaceChain: replaceChain,
       initialiseBlockchain: initialiseBlockchain,
       append: append,
-      getBlockchain: getBlockchain
+      getBlockchain: getBlockchain,
+      Transaction: Transaction,
+      sendTransaction: sendTransaction
     };
   }])
 
@@ -149,7 +175,7 @@ angular.module('blockchain', [])
       let latestBlockHeld     = blockchainService.getLatestBlock();
 
       if (latestBlockReceived.index > latestBlockHeld.index) {
-        logger.log('blockchain possibly behind. We got: ' + latestBlockHeld.index + ' Peer got: ' + latestBlockReceived.index, 'warning');
+        logger.log('Blockchain possibly behind. We got: ' + latestBlockHeld.index + ' Peer got: ' + latestBlockReceived.index, 'warning');
         if (latestBlockHeld.hash === latestBlockReceived.previousHash) {
           logger.log('We can append the received block to our chain', 'success');
           blockchainService.append(latestBlockReceived);
@@ -179,7 +205,7 @@ angular.module('blockchain', [])
     const initMessageHandler = function (ws) {
       ws.on('message', function (data) {
         let message = JSON.parse(data);
-        logger.log('Received message' + JSON.stringify(message), 'info');
+        logger.log('Peer message: ' + JSON.stringify(message), 'info');
         switch (message.type) {
           case MessageType.QUERY_LATEST:
             broadcast(responseLatestMsg());
@@ -206,12 +232,12 @@ angular.module('blockchain', [])
     let logs = [];
 
     const classMap = {
-      'error': 'label label-danger',
-      'warning': 'label label-warning',
-      'success': 'label label-success',
-      'info': 'label label-info',
-      'verbose': 'label label-primary',
-      'debug': 'label label-default',
+      'error': 'badge badge-pill badge-danger',
+      'warning': 'badge badge-pill badge-warning',
+      'success': 'badge badge-pill badge-success',
+      'info': 'badge badge-pill badge-info',
+      'verbose': 'badge badge-pill badge-primary',
+      'debug': 'badge badge-pill badge-default',
     };
 
     const prioMap = {
@@ -223,16 +249,34 @@ angular.module('blockchain', [])
       'debug': 5
     };
 
+    const toString = function (num) {
+      if (num < 9) {
+        return '0' + num;
+      } else {
+        return num;
+      }
+    };
+
+    const getDate = function () {
+      let now   = new Date(Date.now());
+      let hours = toString(now.getUTCHours());
+      let min   = toString(now.getUTCMinutes());
+      let secs  = toString(now.getUTCSeconds());
+      let milli = toString(now.getUTCMilliseconds());
+      return [hours, min, secs].join(':') + '.' + milli + 'Z';
+    };
+
     const log = function (message, level) {
       let log;
+      let timestamp = getDate();
       if (level) {
-        log = {message: message, class: classMap[level], level: level, prio: prioMap[level]};
+        log = {message: message, timestamp: timestamp, class: classMap[level], level: level, prio: prioMap[level]};
       } else {
-        log = {message: message};
+        log = {message: message, timestamp: timestamp};
       }
       logs.push(log);
       logs.reverse();
-      console.log('[' + level.toUpperCase() + ']' + message);
+      console.log('[' + level.toUpperCase() + ']' + ' - ' + timestamp + ' - ' + message);
     };
 
     const getLogs = function () {
@@ -253,11 +297,26 @@ angular.module('blockchain', [])
     };
   })
 
+  .filter('transactionFltr', function () {
+    return function (items, scope) {
+      let self     = scope.node;
+      let filtered = [];
+      if (items) {
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].name !== self.name) {
+            filtered.push(items[i]);
+          }
+        }
+        return filtered;
+      }
+    };
+  })
+
   .controller('mainController', ['$scope', '$http', 'socket', 'blockchainService', 'p2pService', 'logger',
     function ($scope, $http, socket, blockchainService, p2pService, logger) {
       socket.on('init-message', function (data) {
-        $scope.name  = data.name;
-        $scope.nodes = data.nodes;
+        $scope.node  = data.node;
+        $scope.peers = data.nodes;
       });
 
       // Initialises the node blockchain
@@ -268,7 +327,7 @@ angular.module('blockchain', [])
         $scope.nodes = data.nodes;
       });
 
-      $scope.$watch(
+      $scope.$watchCollection(
         function () {
           return blockchainService.getBlockchain();
         }, function (newChain) {
@@ -277,7 +336,7 @@ angular.module('blockchain', [])
           }
         });
 
-      $scope.$watch(
+      $scope.$watchCollection(
         function () {
           return logger.getLogs();
         }, function (newVal) {
@@ -289,9 +348,17 @@ angular.module('blockchain', [])
       };
 
       $scope.mineBlock = function () {
-        blockchainService.mineBlock($scope.blockchain, $scope.blockdata, $scope.name)
-          .then(function (newChain) {
+        blockchainService.mineBlock($scope.blockchain, $scope.blockdata, $scope.node.id)
+          .then(function () {
             p2pService.broadcast(p2pService.responseLatestMsg());
           });
+      };
+
+      $scope.createTransaction = function () {
+        let transaction = new blockchainService.Transaction($scope.node.id, $scope.transactionRecipient, $scope.transactionData);
+        blockchainService.sendTransaction(transaction).then(function (res) {
+          console.log(res.data.data);
+        });
+        console.log(transaction);
       };
     }]);

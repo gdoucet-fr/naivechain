@@ -8,6 +8,7 @@ const path          = require('path');
 const io            = require('socket.io')(server);
 const blockchainAPI = require(path.join(__dirname, 'blockchain.js'));
 const p2p           = require(path.join(__dirname, 'p2p.js'));
+const shortid       = require('shortid');
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: false}));
@@ -31,46 +32,52 @@ app.get('/genesisBlock', function (req, res) {
 app.post('/generateNextBlock', function (req, res) {
   let blockData  = req.body.blockData;
   let blockchain = req.body.blockchain;
-  console.log(blockData);
-  console.log(blockchain);
+  //console.log(blockData);
+  //console.log(blockchain);
   res.send({data: blockchainAPI.generateNextBlock(blockchain, blockData)});
 });
 
 app.post('/getLatestBlock', function (req, res) {
   let blockchain = req.body.blockchain;
-  console.log(blockchain);
+  //console.log(blockchain);
   res.send({data: blockchainAPI.getLatestBlock(blockchain)});
 });
 
 app.post('/isValidNewBlock', function (req, res) {
   let newBlock      = req.body.newBlock;
   let previousBlock = req.body.previousBlock;
-  console.log(newBlock);
-  console.log(previousBlock);
+  //console.log(newBlock);
+  //console.log(previousBlock);
   res.send({data: blockchainAPI.isValidNewBlock(newBlock, previousBlock)});
 });
 
 app.post('/isValidChain', function (req, res) {
   let chainToValidate = req.body.chainToValidate;
-  console.log(chainToValidate);
+  //console.log(chainToValidate);
   res.send({data: blockchainAPI.isValidChain(chainToValidate)});
 });
 
 app.post('/calculateHashForBlock', function (req, res) {
   let block = req.body.block;
-  console.log(block);
+  //console.log(block);
   res.send({data: blockchainAPI.calculateHashForBlock(block)});
 });
 
 app.post('/mineBlock', function (req, res) {
   let blockData  = req.body.blockData;
   let blockchain = req.body.blockchain;
-  let miner      = req.body.minedBy;
+  let miner      = req.body.miner;
   let newBlock   = blockchainAPI.generateNextBlock(blockchain, blockData, miner);
   let newChain   = blockchainAPI.addBlock(newBlock, blockchain);
   res.send({data: newChain});
-//  broadcast(p2p.responseLatestMsg(newChain));
-//  broadcast('hello');
+});
+
+app.post('/sendTransaction', function (req, res) {
+  console.log('yoohoo');
+  let transaction = req.body.transaction;
+  transaction.id  = shortid.generate();
+  console.log(transaction);
+  res.send({data: transaction});
 });
 
 
@@ -119,11 +126,12 @@ let addClient = function (socket) {
 
   let index   = getIndex();
   let name    = 'node-' + index;
-  let newNode = {name: name, index: index};
+  let id      = shortid.generate();
+  let newNode = {name: name, index: index, id: id};
   _.set(sockets, socket.id, newNode);
 
   let nodes = getNodes();
-  socket.emit('init-message', {message: 'Connection established!', name: name, nodes: nodes});
+  socket.emit('init-message', {message: 'Connection established!', node: newNode, nodes: nodes});
   socket.broadcast.emit('nodes-update', {nodes: nodes});
 };
 
@@ -139,7 +147,6 @@ io.sockets.on('connection', function (socket) {
 
 // On reception of a message of type 'client-broadcast' the server simply forwards the data
   socket.on('client-broadcast', function (data) {
-    console.log(data);
     socket.broadcast.emit('message', data);
   });
 

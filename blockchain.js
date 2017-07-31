@@ -4,15 +4,16 @@
 
 'use strict';
 
-const crypto = require('crypto-js');
-const path   = require('path');
+const crypto  = require('crypto-js');
+const path    = require('path');
 //const logger = require(path.join(__dirname, 'logger'));
-const logger = require('winston');
-const uuidv1 = require('uuid/v1');
-const _      = require('lodash');
+const logger  = require('winston');
+const shortid = require('shortid');
+const _       = require('lodash');
 
 class Block {
   constructor(index, previousHash, timestamp, data, hash, miner) {
+//    console.log('Miner: ' + miner);
     this.index        = index;
     this.previousHash = previousHash.toString();
     this.timestamp    = timestamp;
@@ -24,7 +25,7 @@ class Block {
 
 class Transaction {
   constructor() {
-    this.id = uuidv1();
+    this.id = shortid.generate();
   };
 }
 
@@ -34,7 +35,7 @@ class Transaction {
  * @returns {Block} The genesis block
  */
 const getGenesisBlock = function () {
-  return new Block(0, '0', 1497830400, 'genesis block', '89540f61e334e6612ca801029ce3915a1c7ef8eba3a0e1f55fae49e7a2190d3d');
+  return new Block(0, '0', 1497830400, 'genesis block', '89540f61e334e6612ca801029ce3915a1c7ef8eba3a0e1f55fae49e7a2190d3d', 'root');
 };
 
 
